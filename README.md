@@ -113,8 +113,10 @@ sql_data_warehouse/
 │   │   ├── silver_ddl.sql
 │   │   └── silver_data_cleaning.sql
 │   └── gold/
+│       └── gold_views.sql
 ├── test/
-│   └── silver_test.sql
+│   ├── silver_test.sql
+│   └── gold_test.sql
 ├── LICENSE
 └── README.md
 ```
@@ -131,8 +133,12 @@ EXEC bronze.load_bronze;
 -- Run: src/silver/silver_ddl.sql
 EXEC silver.load_silver;
 
--- 3. Run silver data quality tests
+-- 3. Create gold views
+-- Run: src/gold/gold_views.sql
+
+-- 4. Run data quality tests
 -- Run: test/silver_test.sql
+-- Run: test/gold_test.sql
 ```
 
 ## Source
