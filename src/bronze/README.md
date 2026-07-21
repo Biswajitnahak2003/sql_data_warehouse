@@ -98,7 +98,7 @@ EXEC bronze.load_bronze;
 
 ## Source
 
-Data provided by [Baraa](https://github.com/BaraaAlworafi) as part of the SQL Data Warehouse project.
+Data sourced from [DataWithBaraa/sql-data-warehouse-project](https://github.com/DataWithBaraa/sql-data-warehouse-project/tree/main/datasets).
 
 ## License
 
