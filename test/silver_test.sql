@@ -1,6 +1,5 @@
 -- Silver Layer Data Quality Tests
 -- Run after: EXEC silver.load_silver
--- 6 tables × 8 checks each = 48 total checks
 
 -- =============================================================================
 -- 1. crm_cust_info

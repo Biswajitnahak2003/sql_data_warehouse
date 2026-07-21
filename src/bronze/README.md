@@ -102,4 +102,4 @@ Data sourced from [DataWithBaraa/sql-data-warehouse-project](https://github.com/
 
 ## License
 
-MIT License - see [LICENSE.txt](../../LICENSE.txt)
+MIT License - see [LICENSE](../../LICENSE)

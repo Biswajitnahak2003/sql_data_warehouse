@@ -25,7 +25,7 @@ A medallion architecture data warehouse built with SQL Server, featuring Bronze,
 │                      GOLD LAYER                             │
 │                 (Business-Ready)                             │
 │         Aggregated, enriched, analytics-ready data          │
-│         Upcoming...                                         │
+│                                                              
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -43,23 +43,23 @@ sql_data_warehouse/
 │       ├── loc_a101.csv
 │       └── px_cat_g1v2.csv
 ├── src/
-│   ├── bronze/              # ✅ Bronze layer (completed)
+│   ├── bronze/              # Bronze layer
 │   │   ├── README.md
 │   │   ├── create_schema.sql
 │   │   ├── create_ddl.sql
 │   │   └── load_data.sql
-│   ├── silver/              # ✅ Silver layer (completed)
+│   ├── silver/              # Silver layer
 │   │   ├── README.md
 │   │   ├── silver_ddl.sql
 │   │   └── silver_data_cleaning.sql
-│   └── gold/                # 🔜 Gold layer (upcoming)
+│   └── gold/                # Gold layer
 ├── test/
 │   └── silver_test.sql      # Silver layer tests
-├── LICENSE.txt
+├── LICENSE
 └── README.md
 ```
 
-## Bronze Layer (Completed)
+## Bronze Layer
 
 The Bronze layer ingests raw CSV data into SQL Server tables with no transformations. See [`src/bronze/README.md`](src/bronze/README.md) for detailed documentation.
 
@@ -76,7 +76,7 @@ The Bronze layer ingests raw CSV data into SQL Server tables with no transformat
 EXEC bronze.load_bronze;
 ```
 
-## Silver Layer (Completed)
+## Silver Layer
 
 The Silver layer cleans and standardizes Bronze data with deduplication, normalization, and validation. See [`src/silver/README.md`](src/silver/README.md) for detailed documentation.
 
@@ -120,4 +120,4 @@ Data sourced from [DataWithBaraa/sql-data-warehouse-project](https://github.com/
 
 ## License
 
-MIT License - see [LICENSE.txt](LICENSE.txt)
+MIT License - see [LICENSE](LICENSE)
