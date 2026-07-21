@@ -6,10 +6,10 @@ A medallion architecture data warehouse built with SQL Server, featuring Bronze,
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     SILVER LAYER                            │
-│               (Cleaned & Standardized)                      │
-│         Data cleansing, deduplication, standardization      │
-│         See: src/silver/README.md                           │
+│                     BRONZE LAYER                            │
+│                   (Raw Data)                                │
+│         Ingest raw CSV data, no transformations             │
+│         See: src/bronze/README.md                           │
 └─────────────────────────┬───────────────────────────────────┘
                           │
                           ▼
@@ -17,7 +17,7 @@ A medallion architecture data warehouse built with SQL Server, featuring Bronze,
 │                     SILVER LAYER                            │
 │               (Cleaned & Standardized)                      │
 │         Data cleansing, deduplication, standardization      │
-│         Upcoming...                                         │
+│         See: src/silver/README.md                           │
 └─────────────────────────┬───────────────────────────────────┘
                           │
                           ▼

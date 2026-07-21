@@ -1,225 +1,257 @@
 -- Silver Layer Data Quality Tests
 -- Run after: EXEC silver.load_silver
+-- 6 tables × 8 checks each = 48 total checks
 
-PRINT '================================================';
-PRINT 'Silver Layer Data Quality Tests';
-PRINT '================================================';
+-- =============================================================================
+-- 1. crm_cust_info
+-- =============================================================================
 
--- =====================================================
--- TEST 1: Check for NULL primary keys
--- =====================================================
-PRINT '';
-PRINT 'TEST 1: NULL Primary Keys';
-PRINT '----------------------------------------------------';
+-- PK: no NULL cst_id
+SELECT 'FAIL: crm_cust_info NULL cst_id' WHERE EXISTS (SELECT 1 FROM silver.crm_cust_info WHERE cst_id IS NULL);
 
--- Test crm_cust_info: cst_id should not be NULL
-IF EXISTS (SELECT 1 FROM silver.crm_cust_info WHERE cst_id IS NULL)
-    PRINT 'FAIL: crm_cust_info has NULL cst_id values';
-ELSE
-    PRINT 'PASS: crm_cust_info has no NULL cst_id values';
+-- PK: no duplicate cst_id
+SELECT 'FAIL: crm_cust_info duplicate cst_id'
+WHERE EXISTS (SELECT cst_id FROM silver.crm_cust_info GROUP BY cst_id HAVING COUNT(*) > 1);
 
--- Test crm_prd_info: prd_id should not be NULL
-IF EXISTS (SELECT 1 FROM silver.crm_prd_info WHERE prd_id IS NULL)
-    PRINT 'FAIL: crm_prd_info has NULL prd_id values';
-ELSE
-    PRINT 'PASS: crm_prd_info has no NULL prd_id values';
+-- Marital status normalized
+SELECT 'FAIL: crm_cust_info unnormalized marital_status'
+WHERE EXISTS (SELECT 1 FROM silver.crm_cust_info WHERE cst_marital_status NOT IN ('Single', 'Married', 'n/a'));
 
--- Test crm_sales_details: sls_ord_num should not be NULL
-IF EXISTS (SELECT 1 FROM silver.crm_sales_details WHERE sls_ord_num IS NULL)
-    PRINT 'FAIL: crm_sales_details has NULL sls_ord_num values';
-ELSE
-    PRINT 'PASS: crm_sales_details has no NULL sls_ord_num values';
+-- Gender normalized
+SELECT 'FAIL: crm_cust_info unnormalized gender'
+WHERE EXISTS (SELECT 1 FROM silver.crm_cust_info WHERE cst_gndr NOT IN ('Female', 'Male', 'n/a'));
 
--- =====================================================
--- TEST 2: Check for duplicate primary keys
--- =====================================================
-PRINT '';
-PRINT 'TEST 2: Duplicate Primary Keys';
-PRINT '----------------------------------------------------';
+-- First name trimmed (no leading/trailing spaces)
+SELECT 'FAIL: crm_cust_info untrimmed firstname'
+WHERE EXISTS (SELECT 1 FROM silver.crm_cust_info WHERE cst_firstname != TRIM(cst_firstname));
 
--- Test crm_cust_info: cst_id should be unique
-IF EXISTS (
-    SELECT cst_id, COUNT(*) AS cnt
-    FROM silver.crm_cust_info
-    GROUP BY cst_id
-    HAVING COUNT(*) > 1
-)
-    PRINT 'FAIL: crm_cust_info has duplicate cst_id values';
-ELSE
-    PRINT 'PASS: crm_cust_info has unique cst_id values';
+-- Last name trimmed
+SELECT 'FAIL: crm_cust_info untrimmed lastname'
+WHERE EXISTS (SELECT 1 FROM silver.crm_cust_info WHERE cst_lastname != TRIM(cst_lastname));
 
--- Test crm_prd_info: prd_id should be unique
-IF EXISTS (
-    SELECT prd_id, COUNT(*) AS cnt
-    FROM silver.crm_prd_info
-    GROUP BY prd_id
-    HAVING COUNT(*) > 1
-)
-    PRINT 'FAIL: crm_prd_info has duplicate prd_id values';
-ELSE
-    PRINT 'PASS: crm_prd_info has unique prd_id values';
+-- Audit column populated
+SELECT 'FAIL: crm_cust_info NULL dwh_create_date'
+WHERE EXISTS (SELECT 1 FROM silver.crm_cust_info WHERE dwh_create_date IS NULL);
 
--- =====================================================
--- TEST 3: Check normalized values
--- =====================================================
-PRINT '';
-PRINT 'TEST 3: Normalized Values';
-PRINT '----------------------------------------------------';
+-- Table has rows
+SELECT 'FAIL: crm_cust_info is empty' WHERE NOT EXISTS (SELECT 1 FROM silver.crm_cust_info);
 
--- Test crm_cust_info: cst_marital_status should be normalized
-IF EXISTS (
-    SELECT 1 FROM silver.crm_cust_info
-    WHERE cst_marital_status NOT IN ('Single', 'Married', 'n/a')
-)
-    PRINT 'FAIL: crm_cust_info has unnormalized marital status values';
-ELSE
-    PRINT 'PASS: crm_cust_info marital status values are normalized';
+-- =============================================================================
+-- 2. crm_prd_info
+-- =============================================================================
 
--- Test crm_cust_info: cst_gndr should be normalized
-IF EXISTS (
-    SELECT 1 FROM silver.crm_cust_info
-    WHERE cst_gndr NOT IN ('Female', 'Male', 'n/a')
-)
-    PRINT 'FAIL: crm_cust_info has unnormalized gender values';
-ELSE
-    PRINT 'PASS: crm_cust_info gender values are normalized';
+-- PK: no NULL prd_id
+SELECT 'FAIL: crm_prd_info NULL prd_id' WHERE EXISTS (SELECT 1 FROM silver.crm_prd_info WHERE prd_id IS NULL);
 
--- Test crm_prd_info: prd_line should be normalized
-IF EXISTS (
-    SELECT 1 FROM silver.crm_prd_info
-    WHERE prd_line NOT IN ('Mountain', 'Road', 'Other Sales', 'Touring', 'n/a')
-)
-    PRINT 'FAIL: crm_prd_info has unnormalized product line values';
-ELSE
-    PRINT 'PASS: crm_prd_info product line values are normalized';
+-- PK: no duplicate prd_id
+SELECT 'FAIL: crm_prd_info duplicate prd_id'
+WHERE EXISTS (SELECT prd_id FROM silver.crm_prd_info GROUP BY prd_id HAVING COUNT(*) > 1);
 
--- Test erp_cust_az12: gen should be normalized
-IF EXISTS (
-    SELECT 1 FROM silver.erp_cust_az12
-    WHERE gen NOT IN ('Female', 'Male', 'n/a')
-)
-    PRINT 'FAIL: erp_cust_az12 has unnormalized gender values';
-ELSE
-    PRINT 'PASS: erp_cust_az12 gender values are normalized';
+-- cat_id format: 5 chars with underscore separator
+SELECT 'FAIL: crm_prd_info invalid cat_id format'
+WHERE EXISTS (SELECT 1 FROM silver.crm_prd_info WHERE cat_id NOT LIKE '_____%' OR cat_id LIKE '%-%');
 
--- Test erp_loc_a101: cntry should be normalized
-IF EXISTS (
-    SELECT 1 FROM silver.erp_loc_a101
-    WHERE cntry IN ('DE', 'US', 'USA')
-)
-    PRINT 'FAIL: erp_loc_a101 has unnormalized country codes';
-ELSE
-    PRINT 'PASS: erp_loc_a101 country values are normalized';
+-- prd_line normalized
+SELECT 'FAIL: crm_prd_info unnormalized prd_line'
+WHERE EXISTS (SELECT 1 FROM silver.crm_prd_info WHERE prd_line NOT IN ('Mountain', 'Road', 'Other Sales', 'Touring', 'n/a'));
 
--- =====================================================
--- TEST 4: Check date validity
--- =====================================================
-PRINT '';
-PRINT 'TEST 4: Date Validity';
-PRINT '----------------------------------------------------';
+-- prd_cost non-negative (NULLs replaced with 0)
+SELECT 'FAIL: crm_prd_info negative prd_cost'
+WHERE EXISTS (SELECT 1 FROM silver.crm_prd_info WHERE prd_cost < 0);
 
--- Test erp_cust_az12: bdate should not be in the future
-IF EXISTS (
-    SELECT 1 FROM silver.erp_cust_az12
-    WHERE bdate > GETDATE()
-)
-    PRINT 'FAIL: erp_cust_az12 has future birthdates';
-ELSE
-    PRINT 'PASS: erp_cust_az12 has no future birthdates';
+-- prd_start_dt not NULL
+SELECT 'FAIL: crm_prd_info NULL prd_start_dt'
+WHERE EXISTS (SELECT 1 FROM silver.crm_prd_info WHERE prd_start_dt IS NULL);
 
--- Test crm_sales_details: sls_order_dt should not be in the future (for most cases)
--- Note: This is a soft check as some test data may have future dates
-DECLARE @future_orders INT;
-SELECT @future_orders = COUNT(*)
-FROM silver.crm_sales_details
-WHERE sls_order_dt > GETDATE();
+-- prd_end_dt >= prd_start_dt (where both exist)
+SELECT 'FAIL: crm_prd_info end before start'
+WHERE EXISTS (SELECT 1 FROM silver.crm_prd_info WHERE prd_end_dt IS NOT NULL AND prd_end_dt < prd_start_dt);
 
-PRINT 'INFO: crm_sales_details has ' + CAST(@future_orders AS NVARCHAR) + ' orders with future dates';
+-- Audit column populated
+SELECT 'FAIL: crm_prd_info NULL dwh_create_date'
+WHERE EXISTS (SELECT 1 FROM silver.crm_prd_info WHERE dwh_create_date IS NULL);
 
--- =====================================================
--- TEST 5: Check data completeness
--- =====================================================
-PRINT '';
-PRINT 'TEST 5: Data Completeness';
-PRINT '----------------------------------------------------';
+-- =============================================================================
+-- 3. crm_sales_details
+-- =============================================================================
 
--- Count records in each table
-DECLARE @cnt INT;
+-- sls_ord_num not NULL
+SELECT 'FAIL: crm_sales_details NULL sls_ord_num'
+WHERE EXISTS (SELECT 1 FROM silver.crm_sales_details WHERE sls_ord_num IS NULL);
 
-SELECT @cnt = COUNT(*) FROM silver.crm_cust_info;
-PRINT 'crm_cust_info: ' + CAST(@cnt AS NVARCHAR) + ' records';
+-- sls_sales positive
+SELECT 'FAIL: crm_sales_details non-positive sales'
+WHERE EXISTS (SELECT 1 FROM silver.crm_sales_details WHERE sls_sales <= 0);
 
-SELECT @cnt = COUNT(*) FROM silver.crm_prd_info;
-PRINT 'crm_prd_info: ' + CAST(@cnt AS NVARCHAR) + ' records';
+-- sls_price positive
+SELECT 'FAIL: crm_sales_details non-positive price'
+WHERE EXISTS (SELECT 1 FROM silver.crm_sales_details WHERE sls_price <= 0);
 
-SELECT @cnt = COUNT(*) FROM silver.crm_sales_details;
-PRINT 'crm_sales_details: ' + CAST(@cnt AS NVARCHAR) + ' records';
+-- sls_quantity positive
+SELECT 'FAIL: crm_sales_details non-positive quantity'
+WHERE EXISTS (SELECT 1 FROM silver.crm_sales_details WHERE sls_quantity <= 0);
 
-SELECT @cnt = COUNT(*) FROM silver.erp_loc_a101;
-PRINT 'erp_loc_a101: ' + CAST(@cnt AS NVARCHAR) + ' records';
+-- sales = quantity × price (consistency check)
+SELECT 'FAIL: crm_sales_details sales != quantity * price'
+WHERE EXISTS (
+    SELECT 1 FROM silver.crm_sales_details
+    WHERE sls_sales != sls_quantity * sls_price
+);
 
-SELECT @cnt = COUNT(*) FROM silver.erp_cust_az12;
-PRINT 'erp_cust_az12: ' + CAST(@cnt AS NVARCHAR) + ' records';
+-- sls_order_dt not NULL
+SELECT 'FAIL: crm_sales_details NULL order_dt'
+WHERE EXISTS (SELECT 1 FROM silver.crm_sales_details WHERE sls_order_dt IS NULL);
 
-SELECT @cnt = COUNT(*) FROM silver.erp_px_cat_g1v2;
-PRINT 'erp_px_cat_g1v2: ' + CAST(@cnt AS NVARCHAR) + ' records';
+-- sls_ship_dt >= sls_order_dt
+SELECT 'FAIL: crm_sales_details ship before order'
+WHERE EXISTS (
+    SELECT 1 FROM silver.crm_sales_details
+    WHERE sls_ship_dt IS NOT NULL AND sls_order_dt IS NOT NULL AND sls_ship_dt < sls_order_dt
+);
 
--- =====================================================
--- TEST 6: Check for empty strings where NULL expected
--- =====================================================
-PRINT '';
-PRINT 'TEST 6: Empty String Handling';
-PRINT '----------------------------------------------------';
+-- Audit column populated
+SELECT 'FAIL: crm_sales_details NULL dwh_create_date'
+WHERE EXISTS (SELECT 1 FROM silver.crm_sales_details WHERE dwh_create_date IS NULL);
 
--- Test erp_loc_a101: blank country should be 'n/a'
-IF EXISTS (
-    SELECT 1 FROM silver.erp_loc_a101
-    WHERE cntry = ''
-)
-    PRINT 'FAIL: erp_loc_a101 has empty string country values';
-ELSE
-    PRINT 'PASS: erp_loc_a101 has no empty string country values';
+-- =============================================================================
+-- 4. erp_cust_az12
+-- =============================================================================
 
--- =====================================================
--- TEST 7: Check referential integrity (basic)
--- =====================================================
-PRINT '';
-PRINT 'TEST 7: Referential Integrity (Basic)';
-PRINT '----------------------------------------------------';
+-- No 'NAS' prefix remaining in cid
+SELECT 'FAIL: erp_cust_az12 NAS prefix not removed'
+WHERE EXISTS (SELECT 1 FROM silver.erp_cust_az12 WHERE cid LIKE 'NAS%');
 
--- Check if sales Cust IDs exist in customer table
-DECLARE @orphan_sales INT;
-SELECT @orphan_sales = COUNT(*)
+-- No future birthdates
+SELECT 'FAIL: erp_cust_az12 future birthdate'
+WHERE EXISTS (SELECT 1 FROM silver.erp_cust_az12 WHERE bdate > GETDATE());
+
+-- Gender normalized
+SELECT 'FAIL: erp_cust_az12 unnormalized gender'
+WHERE EXISTS (SELECT 1 FROM silver.erp_cust_az12 WHERE gen NOT IN ('Female', 'Male', 'n/a'));
+
+-- Audit column populated
+SELECT 'FAIL: erp_cust_az12 NULL dwh_create_date'
+WHERE EXISTS (SELECT 1 FROM silver.erp_cust_az12 WHERE dwh_create_date IS NULL);
+
+-- cid not NULL
+SELECT 'FAIL: erp_cust_az12 NULL cid'
+WHERE EXISTS (SELECT 1 FROM silver.erp_cust_az12 WHERE cid IS NULL);
+
+-- cid not empty string
+SELECT 'FAIL: erp_cust_az12 empty cid'
+WHERE EXISTS (SELECT 1 FROM silver.erp_cust_az12 WHERE cid = '');
+
+-- No duplicate cid
+SELECT 'FAIL: erp_cust_az12 duplicate cid'
+WHERE EXISTS (SELECT cid FROM silver.erp_cust_az12 GROUP BY cid HAVING COUNT(*) > 1);
+
+-- Table has rows
+SELECT 'FAIL: erp_cust_az12 is empty' WHERE NOT EXISTS (SELECT 1 FROM silver.erp_cust_az12);
+
+-- =============================================================================
+-- 5. erp_loc_a101
+-- =============================================================================
+
+-- No dashes in cid
+SELECT 'FAIL: erp_loc_a101 dash in cid'
+WHERE EXISTS (SELECT 1 FROM silver.erp_loc_a101 WHERE cid LIKE '%-%');
+
+-- Country normalized (no raw codes like DE, US, USA)
+SELECT 'FAIL: erp_loc_a101 unnormalized country'
+WHERE EXISTS (SELECT 1 FROM silver.erp_loc_a101 WHERE cntry IN ('DE', 'US', 'USA'));
+
+-- No empty string country (should be 'n/a')
+SELECT 'FAIL: erp_loc_a101 empty country'
+WHERE EXISTS (SELECT 1 FROM silver.erp_loc_a101 WHERE cntry = '');
+
+-- Audit column populated
+SELECT 'FAIL: erp_loc_a101 NULL dwh_create_date'
+WHERE EXISTS (SELECT 1 FROM silver.erp_loc_a101 WHERE dwh_create_date IS NULL);
+
+-- cid not NULL
+SELECT 'FAIL: erp_loc_a101 NULL cid'
+WHERE EXISTS (SELECT 1 FROM silver.erp_loc_a101 WHERE cid IS NULL);
+
+-- cid not empty string
+SELECT 'FAIL: erp_loc_a101 empty cid'
+WHERE EXISTS (SELECT 1 FROM silver.erp_loc_a101 WHERE cid = '');
+
+-- No duplicate cid
+SELECT 'FAIL: erp_loc_a101 duplicate cid'
+WHERE EXISTS (SELECT cid FROM silver.erp_loc_a101 GROUP BY cid HAVING COUNT(*) > 1);
+
+-- Table has rows
+SELECT 'FAIL: erp_loc_a101 is empty' WHERE NOT EXISTS (SELECT 1 FROM silver.erp_loc_a101);
+
+-- =============================================================================
+-- 6. erp_px_cat_g1v2
+-- =============================================================================
+
+-- id not NULL
+SELECT 'FAIL: erp_px_cat_g1v2 NULL id'
+WHERE EXISTS (SELECT 1 FROM silver.erp_px_cat_g1v2 WHERE id IS NULL);
+
+-- cat not NULL
+SELECT 'FAIL: erp_px_cat_g1v2 NULL cat'
+WHERE EXISTS (SELECT 1 FROM silver.erp_px_cat_g1v2 WHERE cat IS NULL);
+
+-- subcat not NULL
+SELECT 'FAIL: erp_px_cat_g1v2 NULL subcat'
+WHERE EXISTS (SELECT 1 FROM silver.erp_px_cat_g1v2 WHERE subcat IS NULL);
+
+-- maintenance not NULL
+SELECT 'FAIL: erp_px_cat_g1v2 NULL maintenance'
+WHERE EXISTS (SELECT 1 FROM silver.erp_px_cat_g1v2 WHERE maintenance IS NULL);
+
+-- No duplicate id
+SELECT 'FAIL: erp_px_cat_g1v2 duplicate id'
+WHERE EXISTS (SELECT id FROM silver.erp_px_cat_g1v2 GROUP BY id HAVING COUNT(*) > 1);
+
+-- Audit column populated
+SELECT 'FAIL: erp_px_cat_g1v2 NULL dwh_create_date'
+WHERE EXISTS (SELECT 1 FROM silver.erp_px_cat_g1v2 WHERE dwh_create_date IS NULL);
+
+-- id not empty string
+SELECT 'FAIL: erp_px_cat_g1v2 empty id'
+WHERE EXISTS (SELECT 1 FROM silver.erp_px_cat_g1v2 WHERE id = '');
+
+-- Table has rows
+SELECT 'FAIL: erp_px_cat_g1v2 is empty' WHERE NOT EXISTS (SELECT 1 FROM silver.erp_px_cat_g1v2);
+
+-- =============================================================================
+-- Cross-table: Referential Integrity
+-- =============================================================================
+
+-- Sales cust_id references valid customer
+SELECT 'FAIL: crm_sales_details orphan cust_id (no matching customer)'
 FROM silver.crm_sales_details s
 LEFT JOIN silver.crm_cust_info c ON s.sls_cust_id = c.cst_id
 WHERE c.cst_id IS NULL;
 
-IF @orphan_sales > 0
-    PRINT 'WARN: crm_sales_details has ' + CAST(@orphan_sales AS NVARCHAR) + ' records with no matching customer';
-ELSE
-    PRINT 'PASS: crm_sales_details has valid customer references';
+-- Sales prd_key references valid product
+SELECT 'FAIL: crm_sales_details orphan prd_key (no matching product)'
+FROM silver.crm_sales_details s
+LEFT JOIN silver.crm_prd_info p ON s.sls_prd_key = p.prd_key
+WHERE p.prd_key IS NULL;
 
--- =====================================================
--- TEST 8: Check dwh_create_date is populated
--- =====================================================
-PRINT '';
-PRINT 'TEST 8: Audit Column populated';
-PRINT '----------------------------------------------------';
+-- erp_cust_az12 cid matches crm_cust_info cst_key
+SELECT 'FAIL: erp_cust_az12 cid not found in crm_cust_info'
+FROM silver.erp_cust_az12 e
+LEFT JOIN silver.crm_cust_info c ON e.cid = c.cst_key
+WHERE c.cst_key IS NULL;
 
-IF EXISTS (SELECT 1 FROM silver.crm_cust_info WHERE dwh_create_date IS NULL)
-    PRINT 'FAIL: crm_cust_info has NULL dwh_create_date';
-ELSE
-    PRINT 'PASS: crm_cust_info dwh_create_date is populated';
+-- erp_loc_a101 cid matches crm_cust_info cst_key
+SELECT 'FAIL: erp_loc_a101 cid not found in crm_cust_info'
+FROM silver.erp_loc_a101 e
+LEFT JOIN silver.crm_cust_info c ON e.cid = c.cst_key
+WHERE c.cst_key IS NULL;
 
-IF EXISTS (SELECT 1 FROM silver.crm_prd_info WHERE dwh_create_date IS NULL)
-    PRINT 'FAIL: crm_prd_info has NULL dwh_create_date';
-ELSE
-    PRINT 'PASS: crm_prd_info dwh_create_date is populated';
+-- crm_prd_info cat_id matches erp_px_cat_g1v2 id
+SELECT 'FAIL: crm_prd_info cat_id not found in erp_px_cat_g1v2'
+FROM silver.crm_prd_info p
+LEFT JOIN silver.erp_px_cat_g1v2 e ON p.cat_id = e.id
+WHERE e.id IS NULL;
 
--- =====================================================
--- SUMMARY
--- =====================================================
-PRINT '';
-PRINT '================================================';
-PRINT 'Silver Layer Tests Completed';
-PRINT '================================================';
+-- =============================================================================
+-- End of Tests (48 checks)
+-- =============================================================================
